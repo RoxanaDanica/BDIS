@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Consultatii;
 use App\Http\Controllers\Pacienti;
+use App\Http\Controllers\Statistici;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -46,6 +47,9 @@ Route::get('/consultatii', [Consultatii::class, 'index'])->name('consultatii.ind
 Route::post('/consultatii', [Consultatii::class, 'store'])->name('consultatii.store');
 Route::put('/consultatii/{consultatie}', [Consultatii::class, 'update'])->name('consultatii.update');
 Route::delete('/consultatii/{consultatie}', [Consultatii::class, 'destroy'])->name('consultatii.destroy'); 
+
+Route::get('/rapoarte-si-statistici', [Statistici::class, 'index'])
+    ->middleware('auth');
 
 
 require __DIR__.'/settings.php';
