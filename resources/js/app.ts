@@ -6,7 +6,12 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { initializeTheme } from './composables/useAppearance';
 import PrimeVue from 'primevue/config';
-// import 'primevue/resources/themes/aura-light-green/theme.css'
+
+import 'primeicons/primeicons.css';          
+import Aura from '@primeuix/themes/aura';    
+import '../css/app.css';               
+import ToastService from 'primevue/toastservice';     
+
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -20,13 +25,22 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(PrimeVue)
+            .use(ToastService)
+            .use(PrimeVue, {
+                theme: {
+                    preset: Aura,
+                    options: {
+                        darkModeSelector: '.system', // Or 'system', 'none', etc.
+                    }
+                }
+            })
             .mount(el);
     },
     progress: {
         color: '#4B5563',
     },
 });
+
 
 // This will set light / dark mode on page load...
 initializeTheme();

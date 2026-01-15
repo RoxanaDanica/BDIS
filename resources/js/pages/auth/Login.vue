@@ -19,8 +19,8 @@ defineProps<{
 }>();
 </script>
 
-<template>
-    <AuthBase
+<template class="!bg-white">
+    <AuthBase class="bg-white"
         title="Log in to your account"
         description="Enter your email and password below to log in"
     >
@@ -28,7 +28,7 @@ defineProps<{
 
         <div
             v-if="status"
-            class="mb-4 text-center text-sm font-medium text-green-600"
+            class="mb-4 text-center text-sm font-medium text-green-600 bg-white"
         >
             {{ status }}
         </div>
