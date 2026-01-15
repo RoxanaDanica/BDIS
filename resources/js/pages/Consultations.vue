@@ -42,6 +42,7 @@ const consultatie = ref({
 
 const toast = useToast()
 
+// Completează automat datele doctorului la selectarea CNP-ului
 watch(() => consultatie.value.cnp_doctor, (newCnp) => {
   const doctor = props.doctori.find(d => d.cnp_doctor === newCnp)
   if (doctor) {
@@ -54,7 +55,6 @@ watch(() => consultatie.value.cnp_doctor, (newCnp) => {
     consultatie.value.doctor_specialitate = ''
   }
 })
-
 
 // Filtrare după pacient, doctor sau specialitate
 const filteredConsultatii = computed(() => {
@@ -93,35 +93,38 @@ const hideDialog = () => {
 
 const salveazaConsultatie = () => {
   submitted.value = true
+
   if (!consultatie.value.cnp_pacient || !consultatie.value.cnp_doctor || !consultatie.value.data_consultatiei) return
 
   const payload = {
     cnp_pacient: consultatie.value.cnp_pacient,
     cnp_doctor: consultatie.value.cnp_doctor,
     data_consultatiei: consultatie.value.data_consultatiei.toISOString().split('T')[0],
-    diagnostic: consultatie.value.diagnostic,
-    medicamentatie: consultatie.value.medicamentatie ?? '',
+    diagnostic: consultatie.value.diagnostic || '',
+    medicamentatie: consultatie.value.medicamentatie || ''
   }
 
   if (consultatie.value.id) {
     const index = consultatiiLocal.value.findIndex(c => c.id === consultatie.value.id)
     router.put(`/consultatii/${consultatie.value.id}`, payload, {
-      onSuccess: () => {
-        consultatiiLocal.value[index] = { ...consultatie.value }
+      onSuccess: (page) => {
+        const updated = page.props.consultatie
+        updated.doctor_specialitate = updated.doctor_specialitate?.nume ?? ''
+        consultatiiLocal.value[index] = { ...updated }
         consultatieDialog.value = false
         toast.add({ severity: 'success', summary: 'Succes', detail: 'Consultatie actualizata' })
       }
     })
   } else {
     router.post('/consultatii', payload, {
-    onSuccess: (page) => {
+      onSuccess: (page) => {
         const newConsultatie = page.props.consultatie
+        newConsultatie.doctor_specialitate = newConsultatie.doctor_specialitate?.nume ?? ''
         consultatiiLocal.value.push(newConsultatie)
         consultatieDialog.value = false
         toast.add({ severity: 'success', summary: 'Succes', detail: 'Consultatie adaugata' })
-    }
-    }) 
-
+      }
+    })
   }
 }
 
@@ -131,121 +134,126 @@ const stergeConsultatie = (row) => {
 }
 
 const confirmaStergere = () => {
-    if (!consultatieDeSters.value) return
+  if (!consultatieDeSters.value) return
 
-    router.delete(`/consultatii/${consultatieDeSters.value.id}`, {
-        onSuccess: () => {
-            consultatiiLocal.value = consultatiiLocal.value.filter(c => c.id !== consultatieDeSters.value.id)
-            toast.add({ severity: 'success', summary: 'Șters', detail: 'Consultatie stearsa' })
-        }
-    })
+  router.delete(`/consultatii/${consultatieDeSters.value.id}`, {
+    onSuccess: () => {
+      consultatiiLocal.value = consultatiiLocal.value.filter(c => c.id !== consultatieDeSters.value.id)
+      confirmDialogVisible.value = false
+      consultatieDeSters.value = null
+      toast.add({ severity: 'success', summary: 'Șters', detail: 'Consultatie stearsa' })
+    }
+  })
 
-    confirmDialogVisible.value = false
-    consultatieDeSters.value = null
 }
 
 const anuleazaStergere = () => {
-    confirmDialogVisible.value = false
-    consultatieDeSters.value = null
+  confirmDialogVisible.value = false
+  consultatieDeSters.value = null
 }
 </script>
 
 <template>
-    <AppLayout>
-        <Head>
-            <title>Gestionare consultatii</title>
-            <meta name="description" content="Pagina de consultatii">
-        </Head>
+<AppLayout>
+  <Head>
+    <title>Gestionare consultatii</title>
+    <meta name="description" content="Pagina de consultatii">
+  </Head>
 
-        <div class="p-[15px] flex gap-[5px] items-center border-b border-[#b3b3b3]">
-            <InputText v-model="search" placeholder="Cauta consultatii"/>
-            <MainButton @click="editeazaConsultatie">Adauga consultatie</MainButton>
-        </div>
+  <div class="p-[15px] flex gap-[5px] items-center border-b border-[#b3b3b3]">
+    <InputText v-model="search" placeholder="Cauta consultatii"/>
+    <MainButton @click="editeazaConsultatie">Adauga consultatie</MainButton>
+  </div>
 
-        <DataTable :value="filteredConsultatii" stripedRows tableStyle="min-width: 50rem" class="p-[15px]">
-            <Column header="Pacient">
-            <template #body="slotProps">{{ slotProps.data.pacient_nume }} {{ slotProps.data.pacient_prenume }}</template>
-            </Column>
-            <Column header="Doctor">
-            <template #body="slotProps">{{ slotProps.data.doctor_nume }} {{ slotProps.data.doctor_prenume }}</template>
-            </Column>
-            <Column header="Specialitate">
-            <template #body="slotProps">{{ slotProps.data.doctor_specialitate }}</template>
-            </Column>
-            <Column field="data_consultatiei" header="Data consultatiei"/>
-            <Column field="diagnostic" header="Diagnostic"/>
-            <Column :exportable="false" header="Options" style="min-width: 12rem">
-            <template #body="slotProps">
-                <MainButton icon="pi pi-pencil" variant="outlined" rounded class="mr-2" @click="editeazaConsultatie(slotProps.data)">Edit</MainButton>
-                <DeleteButton icon="pi pi-trash" variant="outlined" rounded severity="danger" @click="stergeConsultatie(slotProps.data)">Delete</DeleteButton>
-            </template>
-            </Column>
-        </DataTable>
+  <DataTable :value="filteredConsultatii" stripedRows tableStyle="min-width: 50rem" class="p-[15px]">
+    <Column header="Pacient">
+      <template #body="slotProps">{{ slotProps.data.pacient_nume }} {{ slotProps.data.pacient_prenume }}</template>
+    </Column>
+    <Column header="Doctor">
+      <template #body="slotProps">{{ slotProps.data.doctor_nume }} {{ slotProps.data.doctor_prenume }}</template>
+    </Column>
+    <Column header="Specialitate">
+      <template #body="slotProps">{{ slotProps.data.doctor_specialitate }}</template>
+    </Column>
+    <Column field="data_consultatiei" header="Data consultatiei"/>
+    <Column field="diagnostic" header="Diagnostic"/>
+    <Column :exportable="false" header="Options" style="min-width: 12rem">
+      <template #body="slotProps">
+        <MainButton icon="pi pi-pencil" variant="outlined" rounded class="mr-2" @click="editeazaConsultatie(slotProps.data)">Edit</MainButton>
+        <DeleteButton icon="pi pi-trash" variant="outlined" rounded severity="danger" @click="stergeConsultatie(slotProps.data)">Delete</DeleteButton>
+      </template>
+    </Column>
+  </DataTable>
 
-        <Dialog v-model:visible="consultatieDialog" :style="{ width: '500px' }" modal header="">
-            <!-- Pacient -->
-            <div class="mb-4">
-            <label class="block font-bold mb-2">Pacient</label>
-            <template v-if="consultatie.id">
-                <InputText :value="consultatie.pacient_nume + ' ' + consultatie.pacient_prenume" disabled class="w-full border rounded p-2" />
-            </template>
-            <template v-else>
-                <select v-model="consultatie.cnp_pacient" class="w-full border rounded p-2">
-                <option value="">Selecteaza Pacient</option>
-                <option v-for="p in props.pacienti" :key="p.cnp" :value="p.cnp">{{ p.nume }} {{ p.prenume }}</option>
-                </select>
-            </template>
-            </div>
+  <Dialog v-model:visible="consultatieDialog" :style="{ width: '500px' }" modal header="">
+    <!-- Pacient -->
+    <div class="mb-4">
+      <label class="block font-bold mb-2">Pacient</label>
+      <template v-if="consultatie.id">
+        <InputText :value="consultatie.pacient_nume + ' ' + consultatie.pacient_prenume" disabled class="w-full border rounded p-2" />
+      </template>
+      <template v-else>
+        <select v-model="consultatie.cnp_pacient" class="w-full border rounded p-2">
+          <option value="">Selecteaza Pacient</option>
+          <option v-for="p in props.pacienti" :key="p.cnp" :value="p.cnp">{{ p.nume }} {{ p.prenume }}</option>
+        </select>
+      </template>
+    </div>
 
-            <!-- Doctor -->
-            <div class="mb-4">
-            <label class="block font-bold mb-2">Doctor</label>
-            <template v-if="consultatie.id">
-                <InputText :value="consultatie.doctor_nume + ' ' + consultatie.doctor_prenume" disabled class="w-full border rounded p-2" />
-            </template>
-            <template v-else>
-                <select v-model="consultatie.cnp_doctor" class="w-full border rounded p-2">
-                <option value="">Selecteaza Doctor</option>
-                <option v-for="d in props.doctori" :key="d.cnp_doctor" :value="d.cnp_doctor">
-                    {{ d.nume }} {{ d.prenume }} ({{ d.specialitate?.nume ?? 'N/A' }})
-                </option>
+    <!-- Doctor -->
+    <div class="mb-4">
+      <label class="block font-bold mb-2">Doctor</label>
+      <template v-if="consultatie.id">
+        <InputText :value="consultatie.doctor_nume + ' ' + consultatie.doctor_prenume" disabled class="w-full border rounded p-2" />
+      </template>
+      <template v-else>
+        <select v-model="consultatie.cnp_doctor" class="w-full border rounded p-2">
+          <option value="">Selecteaza Doctor</option>
+          <option v-for="d in props.doctori" :key="d.cnp_doctor" :value="d.cnp_doctor">
+            {{ d.nume }} {{ d.prenume }} ({{ d.specialitate?.nume ?? 'N/A' }})
+          </option>
+        </select>
+      </template>
+    </div>
 
-                </select>
-            </template>
-            </div>
+    <!-- Specialitate -->
+    <div class="mb-4">
+      <label class="block font-bold mb-2">Specialitate</label>
+      <InputText v-model="consultatie.doctor_specialitate" class="w-full border rounded p-2" :disabled="consultatie.id"/>
+    </div>
 
-            <!-- Specialitate -->
-            <div class="mb-4">
-            <label class="block font-bold mb-2">Specialitate</label>
-            <InputText v-model="consultatie.doctor_specialitate" class="w-full border rounded p-2" :disabled="consultatie.id"/>
-            </div>
+    <!-- Data consultatiei -->
+    <div class="mb-4">
+      <label class="block font-bold mb-2">Data consultatiei</label>
+      <Calendar v-model="consultatie.data_consultatiei" :showIcon="true" class="w-full" />
+    </div>
 
-            <div class="mb-4">
-            <label class="block font-bold mb-2">Data consultatiei</label>
-            <Calendar v-model="consultatie.data_consultatiei" :showIcon="true" class="w-full" />
-            </div>
-            <div class="mb-4">
-            <label class="block font-bold mb-2">Diagnostic</label>
-            <Textarea v-model="consultatie.diagnostic" rows="3" class="w-full"/>
-            </div>
-            <div class="mb-4">
-            <label class="block font-bold mb-2">Medicamentatie</label>
-            <Textarea v-model="consultatie.medicamentatie" rows="3" class="w-full"/>
-            </div>
+    <!-- Diagnostic -->
+    <div class="mb-4">
+      <label class="block font-bold mb-2">Diagnostic</label>
+      <Textarea v-model="consultatie.diagnostic" rows="3" class="w-full"/>
+    </div>
 
-            <template #footer>
-            <Button label="Cancel" icon="pi pi-times" text @click="hideDialog"/>
-            <Button label="Save" icon="pi pi-check" @click="salveazaConsultatie"/>
-            </template>
-        </Dialog>
+    <!-- Medicamentatie -->
+    <div class="mb-4">
+      <label class="block font-bold mb-2">Medicamentatie</label>
+      <Textarea v-model="consultatie.medicamentatie" rows="3" class="w-full"/>
+    </div>
 
-        <Dialog v-model:visible="confirmDialogVisible" header="Confirmare ștergere" modal :closable="false" :style="{ width: '400px' }">
-            <p>Sigur doriți să ștergeți consultatia?</p>
-            <template #footer>
-            <Button label="Nu" icon="pi pi-times" text @click="anuleazaStergere"/>
-            <Button label="Da" icon="pi pi-check" severity="danger" @click="confirmaStergere"/>
-            </template>
-        </Dialog>
-        <Toast position="bottom-right"/>
-    </AppLayout>
+    <template #footer>
+      <Button label="Cancel" icon="pi pi-times" text @click="hideDialog"/>
+      <Button label="Save" icon="pi pi-check" @click="salveazaConsultatie"/>
+    </template>
+  </Dialog>
+
+  <Dialog v-model:visible="confirmDialogVisible" header="Confirmare ștergere" modal :closable="false" :style="{ width: '400px' }">
+    <p>Sigur doriți să ștergeți consultatia?</p>
+    <template #footer>
+      <Button label="Nu" icon="pi pi-times" text @click="anuleazaStergere"/>
+      <Button label="Da" icon="pi pi-check" severity="danger" @click="confirmaStergere"/>
+    </template>
+  </Dialog>
+
+  <Toast position="bottom-right"/>
+</AppLayout>
 </template>

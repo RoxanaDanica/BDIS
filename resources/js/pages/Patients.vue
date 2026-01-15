@@ -55,9 +55,8 @@ const filteredPacienti = computed(() => {
     )
 })
 
-
 const formFields = [
-    { label: 'CNP', model: 'cnp', type: InputText, required: true },
+    { label: 'CNP', model: 'cnp', type: InputText, required: true, validation: val => /^[0-9]{13}$/.test(val), errorMsg: 'CNP-ul trebuie să aibă 13 cifre' },
     { label: 'Nume', model: 'nume', type: InputText, required: true },
     { label: 'Prenume', model: 'prenume', type: InputText, required: true },
     { label: 'Data nașterii', model: 'dataNasterii', type: InputText, required: true, inputType: 'date' },
@@ -66,6 +65,7 @@ const formFields = [
     { label: 'Email', model: 'email', type: InputText, required: true, validation: val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), errorMsg: 'Email invalid' },
     { label: 'Telefon', model: 'telefon', type: InputText, required: true, validation: val => /^[0-9]{10}$/.test(val), errorMsg: 'Telefon invalid' }
 ]
+
 
 const calculeazaVarsta = (dataNasterii: string) => {
   if (!dataNasterii) return 0
@@ -129,24 +129,31 @@ const stergePacient = (row) => {
     confirmDialogVisible.value = true
 }
 
+
 const confirmaStergere = () => {
     if (!pacientDeSters.value) return
 
     router.delete(`/pacienti/${pacientDeSters.value.cnp}`, {
         onSuccess: () => {
-            pacientiLocal.value = [...pacientiLocal.value.filter(p => p.cnp !== pacientDeSters.value.cnp)]
+            pacientiLocal.value = pacientiLocal.value.filter(
+                p => p.cnp !== pacientDeSters.value!.cnp 
+            )
+
+            pacientDeSters.value = null
+            confirmDialogVisible.value = false
+
             toast.add({ severity: 'success', summary: 'Șters', detail: 'Pacient șters' })
         }
     })
-
-    confirmDialogVisible.value = false
-    pacientDeSters.value = null
 }
+ 
+
 
 const anuleazaStergere = () => {
     confirmDialogVisible.value = false
     pacientDeSters.value = null
 }
+
 </script>
 
 
@@ -161,7 +168,7 @@ const anuleazaStergere = () => {
             <MainButton @click="editeazaPacient">Adauga pacient</MainButton>
         </div>
 
-        <DataTable  :value="filteredPacienti" stripedRows tableStyle="min-width: 50rem" class="p-[15px]">
+        <DataTable :key="pacientiLocal.length" :value="filteredPacienti" stripedRows tableStyle="min-width: 50rem" class="p-[15px]">
             <Column v-for="col of columns" :key="col.field" :field="col.field" :header="col.header"/>
             <Column :exportable="false" header="Options" style="min-width: 12rem">
             <template #body="slotProps">
